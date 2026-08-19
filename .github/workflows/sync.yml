@@ -3,9 +3,9 @@ name: Sync Products from Base.com
 on:
   push:
     branches:
-      - main  # Zmień na 'master', jeśli Twoja główna gałąź tak się nazywa
+      - main
   schedule:
-    - cron: '0 */6 * * *'  # Automatyczna synchronizacja co 6 godzin
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -45,6 +45,6 @@ jobs:
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
-          git pull --rebase || true
+          git pull --rebase origin main || true
           git add products.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update products.json from Base.com" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update products.json from Base.com" && git push origin main)
