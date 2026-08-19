@@ -10,8 +10,8 @@ url = "https://api.baselinker.com/connector.php"
 # SŁOWNIK RĘCZNYCH LINKÓW DLA OFERT (ID z BaseLinkera -> Pełny link Allegro)
 CUSTOM_LINKS = {
     "666331310": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-george-russell-63-brelok-breloczek-formula-1-18846738842",
-    "666324970": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-lewis-hamilton-russell-breloki-breloczki-18846738807"
-    # Tutaj możesz dopisywać kolejne w formacie: "ID": "PEŁNY_LINK",
+    "666324970": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-lewis-hamilton-russell-breloki-breloczki-18846738807",
+    "666331106": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-lewis-hamilton-44-brelok-breloczek-formula-1-18846725264"
 }
 
 def call_baselinker(method, parameters):
@@ -50,6 +50,7 @@ try:
         detailed_items = data_result.get('products', {})
         
         for p_id, p in detailed_items.items():
+            # Ceny
             prices = p.get('prices', {})
             price = 0
             if isinstance(prices, dict) and prices:
@@ -58,6 +59,7 @@ try:
             else:
                 price = p.get('price', 0)
             
+            # Obrazki
             images = p.get('images', [])
             image_url = ""
             if isinstance(images, list) and images:
@@ -67,15 +69,24 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # Sprawdzamy czy mamy ręczny link, jak nie to generujemy domyślny
+            # Linki (słownik ręczny lub domyślny)
             str_p_id = str(p_id)
             if str_p_id in CUSTOM_LINKS:
                 item_url = CUSTOM_LINKS[str_p_id]
             else:
                 item_url = f"https://allegro.pl/oferta/{p_id}"
 
+            # Nazwa produktu (poprawione pobieranie z tekstu/atrybutów)
+            text_data = p.get('text', {})
+            product_name = ""
+            if isinstance(text_data, dict):
+                # Szukamy polskiego tytułu w strukturze BaseLinkera
+                product_name = text_data.get('name', '') or text_data.get('title', '')
+            if not product_name:
+                product_name = p.get('name', f"Produkt {p_id}")
+
             products.append({
-                "name": "",
+                "name": product_name,
                 "price": price,
                 "image": image_url,
                 "url": item_url
@@ -84,7 +95,7 @@ try:
     with open('products.json', 'w', encoding='utf-8') as f:
         json.dump(products, f, ensure_ascii=False, indent=4)
         
-    print(f"Zapisano pomyślnie {len(products)} produktów.")
+    print(f"Zapisano pomyślnie {len(products)} produktów wraz z nazwami i linkami.")
 
 except Exception as e:
     print(f"Błąd krytyczny: {e}")
