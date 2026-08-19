@@ -60,19 +60,27 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # Bezpieczne pobranie linku z danych produktu lub awaryjnie po ID
+            # Próba wyciągnięcia pełnego linku Allegro z pól BaseLinkera
             links = p.get('links', {})
             item_url = ""
-            if isinstance(links, dict) and links:
-                item_url = list(links.values())[0]
-            elif isinstance(links, str) and links:
-                item_url = links
+            if isinstance(links, dict):
+                for key, val in links.items():
+                    if 'allegro' in str(val).lower():
+                        item_url = val
+                        break
             
             if not item_url:
-                item_url = f"https://allegro.pl/oferta/{p_id}"
+                item_url = p.get('url', f"https://allegro.pl/oferta/{p_id}")
+
+            # Pobieranie nazwy produktu
+            name_data = p.get('text', '')
+            if isinstance(name_data, dict):
+                product_name = name_data.get('name', '')
+            else:
+                product_name = str(name_data)
 
             products.append({
-                "name": "",
+                "name": product_name,
                 "price": price,
                 "image": image_url,
                 "url": item_url
