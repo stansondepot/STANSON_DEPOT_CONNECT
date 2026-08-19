@@ -64,7 +64,7 @@ try:
                 "name": "",
                 "price": price,
                 "image": image_url,
-                "url": str(p_id)
+                "url": f"https://allegro.pl/oferta/{p_id}"
             })
             
     with open('products.json', 'w', encoding='utf-8') as f:
