@@ -7,6 +7,13 @@ INVENTORY_ID = os.environ.get('BASE_INVENTORY_ID', '112741')
 
 url = "https://api.baselinker.com/connector.php"
 
+# SŁOWNIK RĘCZNYCH LINKÓW DLA OFERT (ID z BaseLinkera -> Pełny link Allegro)
+CUSTOM_LINKS = {
+    "666331310": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-george-russell-63-brelok-breloczek-formula-1-18846738842",
+    "666324970": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-lewis-hamilton-russell-breloki-breloczki-18846738807"
+    # Tutaj możesz dopisywać kolejne w formacie: "ID": "PEŁNY_LINK",
+}
+
 def call_baselinker(method, parameters):
     payload = {
         "token": API_TOKEN,
@@ -60,27 +67,15 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # Próba wyciągnięcia pełnego linku Allegro z pól BaseLinkera
-            links = p.get('links', {})
-            item_url = ""
-            if isinstance(links, dict):
-                for key, val in links.items():
-                    if 'allegro' in str(val).lower():
-                        item_url = val
-                        break
-            
-            if not item_url:
-                item_url = p.get('url', f"https://allegro.pl/oferta/{p_id}")
-
-            # Pobieranie nazwy produktu
-            name_data = p.get('text', '')
-            if isinstance(name_data, dict):
-                product_name = name_data.get('name', '')
+            # Sprawdzamy czy mamy ręczny link, jak nie to generujemy domyślny
+            str_p_id = str(p_id)
+            if str_p_id in CUSTOM_LINKS:
+                item_url = CUSTOM_LINKS[str_p_id]
             else:
-                product_name = str(name_data)
+                item_url = f"https://allegro.pl/oferta/{p_id}"
 
             products.append({
-                "name": product_name,
+                "name": "",
                 "price": price,
                 "image": image_url,
                 "url": item_url
