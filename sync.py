@@ -45,27 +45,19 @@ try:
         for p_id, p in detailed_items.items():
             str_p_id = str(p_id)
             
-            # 1. Filtrowanie stanu magazynowego
-            stock_data = p.get('stock', {})
-            total_stock = 0
-            if isinstance(stock_data, dict):
-                total_stock = sum(stock_data.values()) if stock_data else 0
-            elif isinstance(stock_data, (int, float)):
-                total_stock = stock_data
-
-            if total_stock <= 0:
-                continue
-
-            # 2. Pobieranie ceny
+            # Pobieranie ceny (obsługa słownika cen i pojedynczych wartości)
             prices = p.get('prices', {})
             price = 0
             if isinstance(prices, dict) and prices:
                 first_price = list(prices.values())[0]
-                price = first_price if isinstance(first_price, (int, float)) else first_price.get('price', 0)
+                if isinstance(first_price, (int, float)):
+                    price = first_price
+                elif isinstance(first_price, dict):
+                    price = first_price.get('price', 0)
             else:
                 price = p.get('price', 0)
             
-            # 3. Pobieranie zdjęcia
+            # Pobieranie zdjęcia
             images = p.get('images', [])
             image_url = ""
             if isinstance(images, list) and images:
@@ -75,7 +67,7 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Generowanie linku na podstawie external_id / allegro_id
+            # Generowanie linku na podstawie external_id / allegro_id
             external_id = p.get('external_id') or p.get('allegro_id')
             links = p.get('links', {})
             if not external_id and isinstance(links, dict):
@@ -88,7 +80,7 @@ try:
             else:
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
-            # 5. Pobieranie nazwy produktu
+            # Pobieranie nazwy produktu
             text_data = p.get('text', {})
             product_name = ""
             if isinstance(text_data, dict):
@@ -112,7 +104,7 @@ try:
     with open('products.json', 'w', encoding='utf-8') as f:
         json.dump(products, f, ensure_ascii=False, indent=4)
         
-    print(f"Zapisano pomyślnie {len(products)} aktywnych produktów do pliku.")
+    print(f"Zapisano pomyślnie {len(products)} produktów do pliku.")
 
 except Exception as e:
     print(f"Błąd krytyczny: {e}")
