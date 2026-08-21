@@ -7,12 +7,6 @@ INVENTORY_ID = os.environ.get('BASE_INVENTORY_ID', '112741')
 
 url = "https://api.baselinker.com/connector.php"
 
-CUSTOM_LINKS = {
-    "666331310": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-george-russell-63-brelok-breloczek-formula-1-18846738842",
-    "666324970": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-lewis-hamilton-russell-breloki-breloczki-18846738807",
-    "666331106": "https://allegro.pl/oferta/mercedes-benz-amg-petronas-f1-lewis-hamilton-44-brelok-breloczek-formula-1-18846725264"
-}
-
 def call_baselinker(method, parameters):
     payload = {
         "token": API_TOKEN,
