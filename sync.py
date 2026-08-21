@@ -56,7 +56,7 @@ try:
             if total_stock <= 0:
                 continue
 
-            # 2. Pobieranie ceny (naprawione wyciąganie wartości)
+            # 2. Pobieranie ceny
             prices = p.get('prices', {})
             price = 0
             if isinstance(prices, dict) and prices:
@@ -78,17 +78,34 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Generowanie linku na podstawie external_id / allegro_id
-            external_id = p.get('external_id') or p.get('allegro_id')
+            # 4. Generowanie poprawnego linku do Allegro / zewnętrznego źródła
+            item_url = ""
             links = p.get('links', {})
-            if not external_id and isinstance(links, dict):
-                external_id = links.get('allegro') or links.get('external_id')
+            
+            # Szukamy ID powiązania z Allegro w słowniku links (np. {"allegro": "18862598319", ...})
+            allegro_ext_id = None
+            if isinstance(links, dict):
+                # Czasami klucze to ID kont allegro, a wartości to słowniki lub ID oferty
+                for k, v in links.items():
+                    if isinstance(v, dict):
+                        possible_id = v.get('listing_id') or v.get('external_id') or v.get('id')
+                        if possible_id and str(possible_id).isdigit() and len(str(possible_id)) > 5:
+                            allegro_ext_id = possible_id
+                            break
+                    elif v and str(v).isdigit() and len(str(v)) > 5:
+                        allegro_ext_id = v
+                        break
+            
+            if not allegro_ext_id:
+                # Sprawdzamy standardowe pola w obiekcie produktu
+                allegro_ext_id = p.get('allegro_id') or p.get('external_id')
 
-            if external_id and str(external_id).isdigit() and len(str(external_id)) > 5:
-                item_url = f"https://allegro.pl/oferta/{external_id}"
-            elif external_id and str(external_id).startswith("http"):
-                item_url = external_id
+            if allegro_ext_id and str(allegro_ext_id).isdigit() and len(str(allegro_ext_id)) > 5:
+                item_url = f"https://allegro.pl/oferta/{allegro_ext_id}"
+            elif allegro_ext_id and str(allegro_ext_id).startswith("http"):
+                item_url = allegro_ext_id
             else:
+                # Fallback: jeśli brak poprawnego ID allegro, próbujemy użyć głównego ID z Base.com lub pustego linku
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
             # 5. Pobieranie nazwy produktu
