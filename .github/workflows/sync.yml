@@ -1,4 +1,4 @@
-name: Sync Products from Base.com
+name: sync products from Base.com
 
 on:
   push:
