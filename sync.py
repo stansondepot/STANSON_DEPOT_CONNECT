@@ -78,35 +78,38 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Generowanie poprawnego linku do Allegro / zewnętrznego źródła
+            # 4. Precyzyjne wyciąganie numeru oferty z Allegro ze struktur BaseLinkera
             item_url = ""
+            allegro_offer_id = None
+            
+            # Sprawdzamy słownik links (np. klucze powiązane z kontami allegro)
             links = p.get('links', {})
-            
-            # Szukamy ID powiązania z Allegro w słowniku links (np. {"allegro": "18862598319", ...})
-            allegro_ext_id = None
             if isinstance(links, dict):
-                # Czasami klucze to ID kont allegro, a wartości to słowniki lub ID oferty
                 for k, v in links.items():
-                    if isinstance(v, dict):
-                        possible_id = v.get('listing_id') or v.get('external_id') or v.get('id')
-                        if possible_id and str(possible_id).isdigit() and len(str(possible_id)) > 5:
-                            allegro_ext_id = possible_id
+                    # Klucze powiązane z allegro zazwyczaj zawierają słowo "allegro" lub są ID konta
+                    if "allegro" in str(k).lower() or isinstance(v, (int, str)):
+                        val_str = str(v)
+                        if val_str.isdigit() and len(val_str) > 5:
+                            allegro_offer_id = val_str
                             break
-                    elif v and str(v).isdigit() and len(str(v)) > 5:
-                        allegro_ext_id = v
-                        break
-            
-            if not allegro_ext_id:
-                # Sprawdzamy standardowe pola w obiekcie produktu
-                allegro_ext_id = p.get('allegro_id') or p.get('external_id')
+                    if isinstance(v, dict):
+                        for sub_k, sub_v in v.items():
+                            sub_str = str(sub_v)
+                            if sub_str.isdigit() and len(sub_str) > 5:
+                                allegro_offer_id = sub_str
+                                break
 
-            if allegro_ext_id and str(allegro_ext_id).isdigit() and len(str(allegro_ext_id)) > 5:
-                item_url = f"https://allegro.pl/oferta/{allegro_ext_id}"
-            elif allegro_ext_id and str(allegro_ext_id).startswith("http"):
-                item_url = allegro_ext_id
+            # Jeśli nie znaleziono w links, sprawdzamy pole external_id lub allegro_id
+            if not allegro_offer_id:
+                ext = str(p.get('external_id') or p.get('allegro_id') or '')
+                if ext.isdigit() and len(ext) > 5:
+                    allegro_offer_id = ext
+
+            if allegro_offer_id:
+                item_url = f"https://allegro.pl/oferta/{allegro_offer_id}"
             else:
-                # Fallback: jeśli brak poprawnego ID allegro, próbujemy użyć głównego ID z Base.com lub pustego linku
-                item_url = f"https://allegro.pl/oferta/{str_p_id}"
+                # Ostateczny fallback, jeśli w BaseLinkerze brak powiązania z Allegro
+                item_url = p.get('url', f"https://allegro.pl/")
 
             # 5. Pobieranie nazwy produktu
             text_data = p.get('text', {})
