@@ -50,6 +50,19 @@ try:
         detailed_items = data_result.get('products', {})
         
         for p_id, p in detailed_items.items():
+            # Sprawdzamy stan magazynowy (stock) - jeśli 0 lub brak, pomijamy produkt
+            stock_data = p.get('stock', {})
+            total_stock = 0
+            if isinstance(stock_data, dict):
+                # Sumujemy stan ze wszystkich magazynów lub bierzemy główny
+                total_stock = sum(stock_data.values()) if stock_data else 0
+            elif isinstance(stock_data, (int, float)):
+                total_stock = stock_data
+
+            if total_stock <= 0:
+                print(f"Produkt ID {p_id} ma stan 0 – pomijam.")
+                continue
+
             # Ceny
             prices = p.get('prices', {})
             price = 0
@@ -76,12 +89,18 @@ try:
             else:
                 item_url = f"https://allegro.pl/oferta/{p_id}"
 
-            # Nazwa produktu (poprawione pobieranie z tekstu/atrybutów)
+            # Nazwa produktu z języka polskiego w BaseLinkerze
             text_data = p.get('text', {})
             product_name = ""
             if isinstance(text_data, dict):
-                # Szukamy polskiego tytułu w strukturze BaseLinkera
-                product_name = text_data.get('name', '') or text_data.get('title', '')
+                # BaseLinker trzyma nazwy w słowniku języków (np. 'pl': {'name': 'Tytuł'})
+                for lang_key, lang_val in text_data.items():
+                    if isinstance(lang_val, dict) and 'name' in lang_val:
+                        product_name = lang_val['name']
+                        break
+                if not product_name:
+                    product_name = text_data.get('name', '')
+            
             if not product_name:
                 product_name = p.get('name', f"Produkt {p_id}")
 
@@ -95,7 +114,7 @@ try:
     with open('products.json', 'w', encoding='utf-8') as f:
         json.dump(products, f, ensure_ascii=False, indent=4)
         
-    print(f"Zapisano pomyślnie {len(products)} produktów wraz z nazwami i linkami.")
+    print(f"Zapisano pomyślnie {len(products)} dostępnych produktów.")
 
 except Exception as e:
     print(f"Błąd krytyczny: {e}")
