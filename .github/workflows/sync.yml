@@ -1,50 +1,51 @@
-name: sync products from Base.com
+name: Sync Products from Base.com
 
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write
 
 jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: true
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-      - name: Install dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-      - run: pip install requests
+      - name: Install dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - run: pip install requests
 
-      - name: Run sync script
-        env:
-          BASE_TOKEN: ${{ secrets.BASE_TOKEN }}
-          BASE_INVENTORY_ID: ${{ secrets.BASE_INVENTORY_ID }}
-        run: |
-          python sync.py
+      - name: Run sync script
+        env:
+          BASE_TOKEN: ${{ secrets.BASE_TOKEN }}
+          BASE_INVENTORY_ID: ${{ secrets.BASE_INVENTORY_ID }}
+        run: |
+          python sync.py
 
-      - name: Commit and push if changed
-        run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
-          git pull --rebase origin main || true
-          git add products.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update products.json from Base.com" && git push origin main)
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git fetch origin main
+          git rebase origin/main || git rebase --abort
+          git add products.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update products.json from Base.com" && git push origin main)
