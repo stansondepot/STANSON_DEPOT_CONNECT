@@ -85,11 +85,22 @@ try:
             if str_p_id in CUSTOM_LINKS:
                 item_url = CUSTOM_LINKS[str_p_id]
             else:
-                # Sprawdzamy czy w danych produktu jest powiązanie z zewnętrznym ID aukcji (np. Allegro)
-                # BaseLinker często przechowuje to w polach zewnętrznych lub linkach do ofert
-                external_id = p.get('allegro_id') or p.get('external_id') or str_p_id
-                # Jeśli mamy czyste ID wewnętrzne, tworzymy standardowy bezpieczny odnośnik lub szukamy w nazwie
-                item_url = f"https://allegro.pl/oferta/{external_id}"
+                # Spróbuj wyciągnąć pełny link z danych BaseLinkera
+                # BaseLinker często przechowuje linki w polu 'links' lub 'external_url'
+                links = p.get('links', {})
+                # Jeśli links to słownik, szukamy czegoś co wygląda jak Allegro
+                if isinstance(links, dict) and 'allegro' in links:
+                    item_url = links['allegro']
+                elif isinstance(links, str):
+                    item_url = links
+                else:
+                    # Jeśli nie ma, fallback na ID aukcji, jeśli jest znane
+                    allegro_id = p.get('allegro_id') or p.get('external_id')
+                    if allegro_id:
+                        item_url = f"https://allegro.pl/oferta/{allegro_id}"
+                    else:
+                        # Ostateczny fallback, jeśli nie wiemy nic
+                        item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
             # 5. Pobieranie nazwy produktu
             text_data = p.get('text', {})
