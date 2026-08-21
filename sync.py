@@ -23,7 +23,35 @@ def call_baselinker(method, parameters):
     response = requests.post(url, data=payload)
     return response.json()
 
+def get_allegro_offers_map():
+    """Pobiera aktywne oferty Allegro z BaseLinkera, aby wyciągnąć prawdziwe linki aukcji."""
+    print("Pobieranie mapowania ofert z Allegro...")
+    offers_map = {}
+    try:
+        # Pobieramy oferty z serwisu allegro
+        result = call_baselinker("getAllegroOffers", {
+            "status": 1  # 1 oznacza aktywne oferty (zależnie od API BaseLinker)
+        })
+        
+        if result.get('status') == 'SUCCESS':
+            offers = result.get('items', [])
+            for offer in offers:
+                p_id = str(offer.get('product_id', ''))
+                # Szukamy gotowego linku do oferty zwracanego przez BaseLinker
+                offer_url = offer.get('link') or offer.get('external_link')
+                if p_id and offer_url:
+                    offers_map[p_id] = offer_url
+        else:
+            print(f"Uwaga: Nie udało się pobrać ofert Allegro przez API: {result.get('error_message', 'Nieznany błąd')}")
+    except Exception as e:
+        print(f"Uwaga: Błąd podczas pobierania ofert Allegro: {e}")
+        
+    return offers_map
+
 try:
+    # Pobieramy mapę linków z Allegro z wyprzedzeniem
+    allegro_links_map = get_allegro_offers_map()
+
     print("Pobieranie listy produktów z magazynu...")
     list_result = call_baselinker("getInventoryProductsList", {
         "inventory_id": int(INVENTORY_ID),
@@ -50,6 +78,8 @@ try:
         detailed_items = data_result.get('products', {})
         
         for p_id, p in detailed_items.items():
+            str_p_id = str(p_id)
+            
             # 1. Filtrowanie stanu magazynowego (pomijamy wszystko <= 0)
             stock_data = p.get('stock', {})
             total_stock = 0
@@ -80,26 +110,22 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Inteligentne generowanie linku do Allegro
-            str_p_id = str(p_id)
+            # 4. Inteligentne generowanie linku (Priorytety: Custom -> Mapa Allegro API -> Dane produktu -> Fallback po ID)
             if str_p_id in CUSTOM_LINKS:
                 item_url = CUSTOM_LINKS[str_p_id]
+            elif str_p_id in allegro_links_map:
+                item_url = allegro_links_map[str_p_id]
             else:
-                # Spróbuj wyciągnąć pełny link z danych BaseLinkera
-                # BaseLinker często przechowuje linki w polu 'links' lub 'external_url'
                 links = p.get('links', {})
-                # Jeśli links to słownik, szukamy czegoś co wygląda jak Allegro
                 if isinstance(links, dict) and 'allegro' in links:
                     item_url = links['allegro']
                 elif isinstance(links, str):
                     item_url = links
                 else:
-                    # Jeśli nie ma, fallback na ID aukcji, jeśli jest znane
                     allegro_id = p.get('allegro_id') or p.get('external_id')
                     if allegro_id:
                         item_url = f"https://allegro.pl/oferta/{allegro_id}"
                     else:
-                        # Ostateczny fallback, jeśli nie wiemy nic
                         item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
             # 5. Pobieranie nazwy produktu
