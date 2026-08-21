@@ -74,29 +74,20 @@ try:
                 image_url = list(images.values())[0]
             else:
                 image_url = p.get('image', '')
-# 4. Wyciąganie właściwego ID/numera oferty Allegro
-            # Twoje mapowanie (dodaj tutaj numery dla kolejnych produktów, jeśli chcesz mieć pełną kontrolę)
-            PRODUCT_TO_ALLEGRO_ID = {
-                "665104026": "18859604551",
-                "665099963": "18859604510",
-                "665089987": "18859604459",
-                "665073252": "18859604411",
-                "665072667": "18859604371",
-                "665095324": "18859226932",
-                "665075258": "18859203520",
-                "665070777": "18859192361",
-                "665064447": "18859180324",
-                "665070047": "18858993854"
-            }
 
-            if str_p_id in CUSTOM_LINKS:
-                item_url = CUSTOM_LINKS[str_p_id]
-            elif str_p_id in PRODUCT_TO_ALLEGRO_ID:
-                item_url = f"https://allegro.pl/oferta/{PRODUCT_TO_ALLEGRO_ID[str_p_id]}"
+            # 4. Generowanie linku na podstawie external_id / allegro_id
+            external_id = p.get('external_id') or p.get('allegro_id')
+            links = p.get('links', {})
+            if not external_id and isinstance(links, dict):
+                external_id = links.get('allegro') or links.get('external_id')
+
+            if external_id and str(external_id).isdigit() and len(str(external_id)) > 5:
+                item_url = f"https://allegro.pl/oferta/{external_id}"
+            elif external_id and str(external_id).startswith("http"):
+                item_url = external_id
             else:
-                # Jeśli nie ma w mapowaniu, budujemy link na podstawie ID magazynu
-                # (Zostawiamy tak jak było, bo API magazynu nie daje nam numeru oferty wprost)
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
+
             # 5. Pobieranie nazwy produktu
             text_data = p.get('text', {})
             product_name = ""
