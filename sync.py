@@ -78,37 +78,20 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Wyciąganie numeru oferty Allegro ze słownika links
-            allegro_offer_id = None
+            # 4. Pobieranie numeru oferty z pól powiązań lub external_id (tak jak działało pierwotnie)
+            external_id = p.get('external_id') or p.get('allegro_id')
             links = p.get('links', {})
-            
-            if isinstance(links, dict):
-                for market_key, market_val in links.items():
-                    # Szukamy powiązań z Allegro (klucze zazwyczaj zawierają 'allegro' lub ID konta)
-                    if isinstance(market_val, dict):
-                        # Czasami ID oferty jest ukryte jako listing_id, external_id lub id wewnątrz słownika
-                        for sub_k in ['listing_id', 'external_id', 'id', 'auction_id']:
-                            val = market_val.get(sub_k)
-                            if val and str(val).isdigit() and len(str(val)) > 8:
-                                allegro_offer_id = str(val)
-                                break
-                    elif market_val and str(market_val).isdigit() and len(str(market_val)) > 8:
-                        allegro_offer_id = str(market_val)
-                        break
-                    if allegro_offer_id:
+            if not external_id and isinstance(links, dict):
+                # Pobieramy pierwszą lepszą wartość z powiązań Allegro/zewnętrznych
+                for k, v in links.items():
+                    if v:
+                        external_id = v
                         break
 
-            # Jeśli nie znaleziono w links, sprawdzamy pole external_id / allegro_id na poziomie produktu
-            if not allegro_offer_id:
-                for field in ['external_id', 'allegro_id']:
-                    val = str(p.get(field, ''))
-                    if val.isdigit() and len(val) > 8:
-                        allegro_offer_id = val
-                        break
-
-            # Budowanie poprawnego linku z numerem oferty Allegro
-            if allegro_offer_id:
-                item_url = f"https://allegro.pl/oferta/{allegro_offer_id}"
+            if external_id and str(external_id).isdigit() and len(str(external_id)) > 5:
+                item_url = f"https://allegro.pl/oferta/{external_id}"
+            elif external_id and str(external_id).startswith("http"):
+                item_url = external_id
             else:
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
