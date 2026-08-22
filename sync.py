@@ -65,7 +65,7 @@ try:
             else:
                 price = p.get('price', 0)
             
-            # 3. Pobieranie zdjęcia
+            # 3. Pobieranie zdjęcia (wykorzystuje ID katalogu / p_id)
             images = p.get('images', [])
             image_url = ""
             if isinstance(images, list) and images:
@@ -75,25 +75,38 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. POBIERANIE WŁAŚCIWEGO 11-CYFROWEGO NUMERU ALLEGRO (zaczynającego się od "1")
+            # 4. WYLOWANIE 11-CYFROWEGO NUMERU OFERTY ALLEGRO
             allegro_id = None
             
-            # Sprawdzamy słownik linków marketplace (tam BaseLinker trzyma ID oferty Allegro)
+            # Przeszukujemy słownik 'links' (tam BaseLinker trzyma powiązania z Allegro)
             links = p.get('links', {})
             if isinstance(links, dict):
-                for market, val in links.items():
-                    val_str = str(val).strip()
-                    if val_str.startswith('1') and len(val_str) >= 10:
-                        allegro_id = val_str
+                for market_key, market_val in links.items():
+                    # market_val może być słownikiem lub bezpośrednio ID/linkiem
+                    if isinstance(market_val, dict):
+                        for sub_k, sub_v in market_val.items():
+                            val_str = str(sub_v).strip()
+                            if val_str.startswith('1') and len(val_str) >= 10:
+                                allegro_id = val_str
+                                break
+                    else:
+                        val_str = str(market_val).strip()
+                        if val_str.startswith('1') and len(val_str) >= 10:
+                            allegro_id = val_str
+                            break
+                    if allegro_id:
                         break
             
-            # Jeśli nie ma w linkach, sprawdzamy external_id
+            # Jeśli nie znaleziono w links, sprawdzamy external_id oraz inne pola tekstowe
             if not allegro_id:
-                ext_id = str(p.get('external_id', '')).strip()
-                if ext_id.startswith('1') and len(ext_id) >= 10:
-                    allegro_id = ext_id
+                for potential_field in [p.get('external_id'), p.get('sku')]:
+                    if potential_field:
+                        f_str = str(potential_field).strip()
+                        if f_str.startswith('1') and len(f_str) >= 10:
+                            allegro_id = f_str
+                            break
 
-            # Jeśli znaleźliśmy 11-cyfrowy numer Allegro, budujemy z nim link. W przeciwnym razie bierzemy ID magazynu.
+            # Budowanie ostatecznego linku (jeśli brak 11 cyfr Allegro, awaryjnie id katalogu)
             if allegro_id:
                 item_url = f"https://allegro.pl/oferta/{allegro_id}"
             else:
