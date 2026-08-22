@@ -7,6 +7,11 @@ INVENTORY_ID = os.environ.get('BASE_INVENTORY_ID', '112741')
 
 url = "https://api.baselinker.com/connector.php"
 
+# SŁOWNIK RĘCZNYCH LINKÓW: Tutaj dopisujesz ID z magazynu (9 cyfr) -> 11-cyfrowy link z Allegro (zaczynający się na 1)
+CUSTOM_OFFER_LINKS = {
+    # "66507528": "18862598319",  <-- tutaj możesz dopisywać w razie potrzeby nowe oferty
+}
+
 def call_baselinker(method, parameters):
     payload = {
         "token": API_TOKEN,
@@ -75,35 +80,10 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. SZUKANIE 11-CYFROWEGO NUMERU ALLEGRO (Zaczynającego się od "1")
-            allegro_offer_id = None
-            
-            # Sprawdzamy pole external_id
-            ext_id = str(p.get('external_id', ''))
-            if ext_id.startswith('1') and len(ext_id) >= 10:
-                allegro_offer_id = ext_id
-                
-            # Sprawdzamy słownik linków / powiązań marketplace
-            if not allegro_offer_id:
-                links = p.get('links', {})
-                if isinstance(links, dict):
-                    for k, v in links.items():
-                        v_str = str(v)
-                        if v_str.startswith('1') and len(v_str) >= 10:
-                            allegro_offer_id = v_str
-                            break
-                            
-            # Jeśli nadal brak, sprawdzamy czy w tekstach lub innych polach nie ma aukcji
-            if not allegro_offer_id:
-                # Awaryjnie sprawdzamy czy external_id ogólnie istnieje, jeśli nie - bierzemy ID magazynu
-                if ext_id and ext_id.isdigit() and len(ext_id) >= 10:
-                    allegro_offer_id = ext_id
-
-            # Generowanie finalnego linku
-            if allegro_offer_id:
-                item_url = f"https://allegro.pl/oferta/{allegro_offer_id}"
+            # 4. Generowanie linku (sprawdzamy czy jest w słowniku ręcznym, a jak nie, bierzemy domyślny)
+            if str_p_id in CUSTOM_OFFER_LINKS:
+                item_url = f"https://allegro.pl/oferta/{CUSTOM_OFFER_LINKS[str_p_id]}"
             else:
-                # Fallback do zwykłego ID jeśli brak 11-cyfrowego numeru
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
             # 5. Pobieranie nazwy produktu
