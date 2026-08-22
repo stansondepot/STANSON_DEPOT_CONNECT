@@ -75,21 +75,29 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Generowanie linku na podstawie external_id lub słownika links
-            external_id = p.get('external_id') or p.get('allegro_id')
-            links = p.get('links', {})
+            # 4. Celowane wyciąganie numeru Allegro (11 znaków, zaczynający się na '1')
+            allegro_offer_id = None
             
-            if not external_id and isinstance(links, dict) and links:
-                for market_id, offer_val in links.items():
-                    if offer_val:
-                        external_id = offer_val
-                        break
+            # Sprawdzamy pole external_id
+            ext = str(p.get('external_id') or p.get('allegro_id') or '')
+            if ext.startswith('1') and len(ext) >= 10:
+                allegro_offer_id = ext
 
-            if external_id and str(external_id).isdigit() and len(str(external_id)) > 5:
-                item_url = f"https://allegro.pl/oferta/{external_id}"
-            elif external_id and str(external_id).startswith("http"):
-                item_url = external_id
+            # Jeśli nie ma, szukamy w słowniku links
+            if not allegro_offer_id:
+                links = p.get('links', {})
+                if isinstance(links, dict):
+                    for k, v in links.items():
+                        v_str = str(v)
+                        # Szukamy wartości, która ma 10-12 znaków i zaczyna się na 1 (pomijamy ID katalogu na 6)
+                        if v_str.startswith('1') and len(v_str) >= 10 and v_str.isdigit():
+                            allegro_offer_id = v_str
+                            break
+
+            if allegro_offer_id:
+                item_url = f"https://allegro.pl/oferta/{allegro_offer_id}"
             else:
+                # Ostateczny fallback na ID katalogu, jeśli oferta nie ma powiązania
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
             # 5. Pobieranie nazwy produktu
