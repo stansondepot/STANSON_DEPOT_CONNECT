@@ -7,11 +7,6 @@ INVENTORY_ID = os.environ.get('BASE_INVENTORY_ID', '112741')
 
 url = "https://api.baselinker.com/connector.php"
 
-# SŁOWNIK RĘCZNYCH LINKÓW: Tutaj dopisujesz ID z magazynu (9 cyfr) -> 11-cyfrowy link z Allegro (zaczynający się na 1)
-CUSTOM_OFFER_LINKS = {
-    # "66507528": "18862598319",  <-- tutaj możesz dopisywać w razie potrzeby nowe oferty
-}
-
 def call_baselinker(method, parameters):
     payload = {
         "token": API_TOKEN,
@@ -80,9 +75,27 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Generowanie linku (sprawdzamy czy jest w słowniku ręcznym, a jak nie, bierzemy domyślny)
-            if str_p_id in CUSTOM_OFFER_LINKS:
-                item_url = f"https://allegro.pl/oferta/{CUSTOM_OFFER_LINKS[str_p_id]}"
+            # 4. POBIERANIE WŁAŚCIWEGO 11-CYFROWEGO NUMERU ALLEGRO (zaczynającego się od "1")
+            allegro_id = None
+            
+            # Sprawdzamy słownik linków marketplace (tam BaseLinker trzyma ID oferty Allegro)
+            links = p.get('links', {})
+            if isinstance(links, dict):
+                for market, val in links.items():
+                    val_str = str(val).strip()
+                    if val_str.startswith('1') and len(val_str) >= 10:
+                        allegro_id = val_str
+                        break
+            
+            # Jeśli nie ma w linkach, sprawdzamy external_id
+            if not allegro_id:
+                ext_id = str(p.get('external_id', '')).strip()
+                if ext_id.startswith('1') and len(ext_id) >= 10:
+                    allegro_id = ext_id
+
+            # Jeśli znaleźliśmy 11-cyfrowy numer Allegro, budujemy z nim link. W przeciwnym razie bierzemy ID magazynu.
+            if allegro_id:
+                item_url = f"https://allegro.pl/oferta/{allegro_id}"
             else:
                 item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
