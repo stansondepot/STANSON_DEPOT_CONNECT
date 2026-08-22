@@ -75,18 +75,23 @@ try:
             else:
                 image_url = p.get('image', '')
 
-            # 4. Generowanie linku na podstawie external_id / allegro_id
-            external_id = p.get('external_id') or p.get('allegro_id')
-            links = p.get('links', {})
-            if not external_id and isinstance(links, dict):
-                external_id = links.get('allegro') or links.get('external_id')
+           # 4. Generowanie linku na podstawie external_id lub dowolnego ID w słowniku links
+            external_id = p.get('external_id') or p.get('allegro_id')
+            links = p.get('links', {})
+            
+            if not external_id and isinstance(links, dict) and links:
+                # Bierzemy pierwszą lepszą wartość z powiązań (zazwyczaj tam jest ID oferty Allegro)
+                for market_id, offer_val in links.items():
+                    if offer_val:
+                        external_id = offer_val
+                        break
 
-            if external_id and str(external_id).isdigit() and len(str(external_id)) > 5:
-                item_url = f"https://allegro.pl/oferta/{external_id}"
-            elif external_id and str(external_id).startswith("http"):
-                item_url = external_id
-            else:
-                item_url = f"https://allegro.pl/oferta/{str_p_id}"
+            if external_id and str(external_id).isdigit() and len(str(external_id)) > 5:
+                item_url = f"https://allegro.pl/oferta/{external_id}"
+            elif external_id and str(external_id).startswith("http"):
+                item_url = external_id
+            else:
+                item_url = f"https://allegro.pl/oferta/{str_p_id}"
 
             # 5. Pobieranie nazwy produktu
             text_data = p.get('text', {})
